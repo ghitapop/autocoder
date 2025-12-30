@@ -1,0 +1,148 @@
+/**
+ * API Client for the Autonomous Coding UI
+ */
+
+import type {
+  ProjectSummary,
+  ProjectDetail,
+  ProjectPrompts,
+  FeatureListResponse,
+  Feature,
+  FeatureCreate,
+  AgentStatusResponse,
+  AgentActionResponse,
+  SetupStatus,
+} from './types'
+
+const API_BASE = '/api'
+
+async function fetchJSON<T>(url: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${url}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  })
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+    throw new Error(error.detail || `HTTP ${response.status}`)
+  }
+
+  return response.json()
+}
+
+// ============================================================================
+// Projects API
+// ============================================================================
+
+export async function listProjects(): Promise<ProjectSummary[]> {
+  return fetchJSON('/projects')
+}
+
+export async function createProject(name: string, specMethod: 'claude' | 'manual' = 'manual'): Promise<ProjectSummary> {
+  return fetchJSON('/projects', {
+    method: 'POST',
+    body: JSON.stringify({ name, spec_method: specMethod }),
+  })
+}
+
+export async function getProject(name: string): Promise<ProjectDetail> {
+  return fetchJSON(`/projects/${encodeURIComponent(name)}`)
+}
+
+export async function deleteProject(name: string): Promise<void> {
+  await fetchJSON(`/projects/${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function getProjectPrompts(name: string): Promise<ProjectPrompts> {
+  return fetchJSON(`/projects/${encodeURIComponent(name)}/prompts`)
+}
+
+export async function updateProjectPrompts(
+  name: string,
+  prompts: Partial<ProjectPrompts>
+): Promise<void> {
+  await fetchJSON(`/projects/${encodeURIComponent(name)}/prompts`, {
+    method: 'PUT',
+    body: JSON.stringify(prompts),
+  })
+}
+
+// ============================================================================
+// Features API
+// ============================================================================
+
+export async function listFeatures(projectName: string): Promise<FeatureListResponse> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/features`)
+}
+
+export async function createFeature(projectName: string, feature: FeatureCreate): Promise<Feature> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/features`, {
+    method: 'POST',
+    body: JSON.stringify(feature),
+  })
+}
+
+export async function getFeature(projectName: string, featureId: number): Promise<Feature> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/features/${featureId}`)
+}
+
+export async function deleteFeature(projectName: string, featureId: number): Promise<void> {
+  await fetchJSON(`/projects/${encodeURIComponent(projectName)}/features/${featureId}`, {
+    method: 'DELETE',
+  })
+}
+
+export async function skipFeature(projectName: string, featureId: number): Promise<void> {
+  await fetchJSON(`/projects/${encodeURIComponent(projectName)}/features/${featureId}/skip`, {
+    method: 'PATCH',
+  })
+}
+
+// ============================================================================
+// Agent API
+// ============================================================================
+
+export async function getAgentStatus(projectName: string): Promise<AgentStatusResponse> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/agent/status`)
+}
+
+export async function startAgent(projectName: string): Promise<AgentActionResponse> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/agent/start`, {
+    method: 'POST',
+  })
+}
+
+export async function stopAgent(projectName: string): Promise<AgentActionResponse> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/agent/stop`, {
+    method: 'POST',
+  })
+}
+
+export async function pauseAgent(projectName: string): Promise<AgentActionResponse> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/agent/pause`, {
+    method: 'POST',
+  })
+}
+
+export async function resumeAgent(projectName: string): Promise<AgentActionResponse> {
+  return fetchJSON(`/projects/${encodeURIComponent(projectName)}/agent/resume`, {
+    method: 'POST',
+  })
+}
+
+// ============================================================================
+// Setup API
+// ============================================================================
+
+export async function getSetupStatus(): Promise<SetupStatus> {
+  return fetchJSON('/setup/status')
+}
+
+export async function healthCheck(): Promise<{ status: string }> {
+  return fetchJSON('/health')
+}
